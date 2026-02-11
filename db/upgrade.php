@@ -245,7 +245,7 @@ function xmldb_local_assign_ai_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2025120504, 'local', 'assign_ai');
     }
 
-    if ($oldversion < 2025120504) {
+    if ($oldversion < 2025120505) {
         // Define field usedelay to be added to local_assign_ai_config.
         $table = new xmldb_table('local_assign_ai_config');
         $field = new xmldb_field('usedelay', XMLDB_TYPE_INTEGER, '1', null, null, null, '0', 'usermodified');
@@ -256,10 +256,10 @@ function xmldb_local_assign_ai_upgrade($oldversion) {
         }
 
         // Assign_ai savepoint reached.
-        upgrade_plugin_savepoint(true, 2025120504, 'local', 'assign_ai');
+        upgrade_plugin_savepoint(true, 2025120505, 'local', 'assign_ai');
     }
 
-    if ($oldversion < 2025120505) {
+    if ($oldversion < 2025120506) {
         // Define field delayminutes to be added to local_assign_ai_config.
         $table = new xmldb_table('local_assign_ai_config');
         $field = new xmldb_field('delayminutes', XMLDB_TYPE_INTEGER, '6', null, null, null, '0', 'usedelay');
@@ -270,7 +270,7 @@ function xmldb_local_assign_ai_upgrade($oldversion) {
         }
 
         // Assign_ai savepoint reached.
-        upgrade_plugin_savepoint(true, 2025120505, 'local', 'assign_ai');
+        upgrade_plugin_savepoint(true, 2025120506, 'local', 'assign_ai');
     }
 
     if ($oldversion < 2025120803) {
