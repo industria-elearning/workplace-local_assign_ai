@@ -200,17 +200,45 @@ function xmldb_local_assign_ai_upgrade($oldversion) {
     }
 
     if ($oldversion < 2025120501) {
+        // Define table local_assign_ai_queue to be created.
+        $table = new xmldb_table('local_assign_ai_queue');
+
+        // Adding fields to table local_assign_ai_queue.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('tenantid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('type', XMLDB_TYPE_CHAR, '20', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('payload', XMLDB_TYPE_TEXT, null, null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timetoprocess', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('processed', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+
+        // Adding keys to table local_assign_ai_queue.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+
+        // Conditionally launch create table for local_assign_ai_queue.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Assign_ai savepoint reached.
+        upgrade_plugin_savepoint(true, 2025120501, 'local', 'assign_ai');
+    }
+
+    if ($oldversion < 2025120502) {
         // Define field tenantid to be added to local_assign_ai_config.
         $table = new xmldb_table('local_assign_ai_config');
-        $field = new xmldb_field('tenantid', XMLDB_TYPE_INTEGER, '10', null, null, null, '0', 'assignmentid');
+        $field = new xmldb_field('tenantid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'assignmentid');
 
         // Conditionally launch add field tenantid.
         if (!$dbman->field_exists($table, $field)) {
             $dbman->add_field($table, $field);
         }
 
+        // Normalize any legacy null values.
+        $DB->execute('UPDATE {local_assign_ai_config} SET tenantid = 0 WHERE tenantid IS NULL');
+
         // Assign_ai savepoint reached.
-        upgrade_plugin_savepoint(true, 2025120501, 'local', 'assign_ai');
+        upgrade_plugin_savepoint(true, 2025120502, 'local', 'assign_ai');
     }
 
     if ($oldversion < 2025120503) {
@@ -243,6 +271,135 @@ function xmldb_local_assign_ai_upgrade($oldversion) {
         }
 
         upgrade_plugin_savepoint(true, 2025120504, 'local', 'assign_ai');
+    }
+
+    if ($oldversion < 2025120505) {
+        // Define field usedelay to be added to local_assign_ai_config.
+        $table = new xmldb_table('local_assign_ai_config');
+        $field = new xmldb_field('usedelay', XMLDB_TYPE_INTEGER, '1', null, null, null, '0', 'usermodified');
+
+        // Conditionally launch add field usedelay.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Assign_ai savepoint reached.
+        upgrade_plugin_savepoint(true, 2025120505, 'local', 'assign_ai');
+    }
+
+    if ($oldversion < 2025120506) {
+        // Define field delayminutes to be added to local_assign_ai_config.
+        $table = new xmldb_table('local_assign_ai_config');
+        $field = new xmldb_field('delayminutes', XMLDB_TYPE_INTEGER, '6', null, null, null, '0', 'usedelay');
+
+        // Conditionally launch add field delayminutes.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Assign_ai savepoint reached.
+        upgrade_plugin_savepoint(true, 2025120506, 'local', 'assign_ai');
+    }
+
+    if ($oldversion < 2025120803) {
+        $table = new xmldb_table('local_assign_ai_pending');
+        $field = new xmldb_field('assessment_guide_response', XMLDB_TYPE_TEXT, null, null, null, null, null, 'rubric_response');
+
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_plugin_savepoint(true, 2025120803, 'local', 'assign_ai');
+    }
+
+    if ($oldversion < 2026032603) {
+        // Define field prompt to be added to local_assign_ai_config.
+        $table = new xmldb_table('local_assign_ai_config');
+        $field = new xmldb_field('prompt', XMLDB_TYPE_TEXT, null, null, null, null, null, 'delayminutes');
+
+        // Conditionally launch add field prompt.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_plugin_savepoint(true, 2026032603, 'local', 'assign_ai');
+    }
+
+    if ($oldversion < 2026032604) {
+        // Force the default auto-approval setting to disabled by default.
+        set_config('defaultautograde', 0, 'local_assign_ai');
+
+        upgrade_plugin_savepoint(true, 2026032604, 'local', 'assign_ai');
+    }
+
+    if ($oldversion < 2026032605) {
+        // Define field enableai to be added to local_assign_ai_config.
+        $table = new xmldb_table('local_assign_ai_config');
+        $field = new xmldb_field('enableai', XMLDB_TYPE_INTEGER, '1', null, null, null, null, 'tenantid');
+
+        // Conditionally launch add field enableai.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Ensure default value for the new global setting.
+        set_config('defaultenableai', 1, 'local_assign_ai');
+
+        upgrade_plugin_savepoint(true, 2026032605, 'local', 'assign_ai');
+    }
+
+    if ($oldversion < 2026032606) {
+        // Define field lang to be added to local_assign_ai_config.
+        $table = new xmldb_table('local_assign_ai_config');
+        $field = new xmldb_field('lang', XMLDB_TYPE_CHAR, '20', null, null, null, null, 'prompt');
+
+        // Conditionally launch add field lang.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_plugin_savepoint(true, 2026032606, 'local', 'assign_ai');
+    }
+
+    if ($oldversion < 2026032607) {
+        // Define field tenantid to be added to local_assign_ai_queue.
+        $table = new xmldb_table('local_assign_ai_queue');
+        $field = new xmldb_field('tenantid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'id');
+
+        // Conditionally launch add field tenantid.
+        if ($dbman->table_exists($table) && !$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Normalize any legacy null values.
+        if ($dbman->table_exists($table)) {
+            $DB->execute('UPDATE {local_assign_ai_queue} SET tenantid = 0 WHERE tenantid IS NULL');
+        }
+
+        upgrade_plugin_savepoint(true, 2026032607, 'local', 'assign_ai');
+    }
+
+    if ($oldversion < 2026032608) {
+        // Define table local_assign_ai_tenant_cfg to be created.
+        $table = new xmldb_table('local_assign_ai_tenant_cfg');
+
+        // Adding fields to table local_assign_ai_tenant_cfg.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('plugin', XMLDB_TYPE_CHAR, '100', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('tenantid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('name', XMLDB_TYPE_CHAR, '100', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('value', XMLDB_TYPE_TEXT, null, null, null, null, null);
+
+        // Adding keys to table local_assign_ai_tenant_cfg.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('plugin_tenant_name_uniq', XMLDB_KEY_UNIQUE, ['plugin', 'tenantid', 'name']);
+
+        // Conditionally launch create table for local_assign_ai_tenant_cfg.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        upgrade_plugin_savepoint(true, 2026032608, 'local', 'assign_ai');
     }
 
     return true;

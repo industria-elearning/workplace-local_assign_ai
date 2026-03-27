@@ -17,6 +17,7 @@
 namespace local_assign_ai\api;
 
 use aiprovider_datacurso\httpclient\ai_services_api;
+use local_assign_ai\local\payload_anonymizer;
 use local_assign_ai\utils;
 
 /**
@@ -31,19 +32,24 @@ class client {
      * Sends the payload to the AI provider and returns the response.
      *
      * @param array $payload The request payload.
+     * @param int|null $tenantid Tenant id override for Workplace.
      * @return array The AI response.
      */
-    public static function send_to_ai($payload) {
+    public static function send_to_ai($payload, ?int $tenantid = null) {
         $payload = utils::normalize_payload($payload);
+        $anonymized = payload_anonymizer::anonymize($payload);
+        $payload = $anonymized['payload'];
+        $replacements = $anonymized['replacements'];
 
-        $client = new ai_services_api();
+        $client = new ai_services_api(null, $tenantid);
 
         $response = $client->request('POST', '/assign/answer', $payload);
 
         return [
-        'reply'  => $response['reply'],
-        'grade'  => $response['grade'],
-        'rubric' => $response['rubric'],
+            'reply' => payload_anonymizer::deanonymize_text((string)($response['reply'] ?? ''), $replacements),
+            'grade' => $response['grade'],
+            'rubric' => $response['rubric'] ?? null,
+            'assessment_guide' => $response['assessment_guide'] ?? null,
         ];
     }
 }

@@ -24,8 +24,6 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->dirroot . '/local/assign_ai/locallib.php');
-
 /**
  * Extends assignment navigation to display the "AI Review" button.
  *
@@ -97,38 +95,38 @@ function local_assign_ai_coursemodule_standard_elements($formwrapper, $mform) {
         return;
     }
 
-    $assignid = $formwrapper->get_current()->instance ?? null;
-    $tenantid = \tool_tenant\tenancy::get_tenant_id();
-
-    // Load tenant-aware configuration.
-    $config = null;
-    if ($assignid) {
-        if ($tenantid === null) {
-            $sql = "SELECT * FROM {local_assign_ai_config}
-                    WHERE assignmentid = :assignmentid AND tenantid IS NULL";
-            $params = ['assignmentid' => $assignid];
-        } else {
-            $sql = "SELECT * FROM {local_assign_ai_config}
-                    WHERE assignmentid = :assignmentid AND tenantid = :tenantid";
-            $params = [
-                'assignmentid' => $assignid,
-                'tenantid' => $tenantid,
-            ];
-        }
-
-        $config = $DB->get_record_sql($sql, $params);
-
-        // Fallback legacy.
-        if (!$config && $tenantid !== null) {
-            $config = $DB->get_record('local_assign_ai_config', [
-                'assignmentid' => $assignid,
-                'tenantid' => null,
-            ]);
-        }
+    if (!\local_assign_ai\config\assignment_config::is_feature_enabled()) {
+        return;
     }
 
-    $defaultautograde = $config->autograde ?? 0;
+    $assignid = $formwrapper->get_current()->instance ?? 0;
+    $config = \local_assign_ai\config\assignment_config::get_effective((int)$assignid);
+
+    $enableai = (int)($config->enableai ?? 1);
+    $autograde = (int)($config->autograde ?? 0);
     $graderdefault = $config->graderid ?? null;
+    $usedelay = (int)($config->usedelay ?? 0);
+    $delayminutes = max(1, (int)($config->delayminutes ?? 60));
+    $prompt = trim((string)($config->prompt ?? ''));
+    if ($prompt === '') {
+        $prompt = get_string('promptdefaulttext', 'local_assign_ai');
+    }
+
+    $languages = get_string_manager()->get_list_of_languages(null, 'iso6391');
+    $langoptions = [];
+    foreach ($languages as $code => $name) {
+        $langoptions[$code] = "$name ($code)";
+    }
+
+    $defaultlang = trim((string)get_config('core', 'lang'));
+    if ($defaultlang === '') {
+        $defaultlang = current_language();
+    }
+
+    $selectedlang = trim((string)($config->lang ?? ''));
+    if ($selectedlang === '') {
+        $selectedlang = $defaultlang;
+    }
 
     $mform->addElement(
         'header',
@@ -138,12 +136,55 @@ function local_assign_ai_coursemodule_standard_elements($formwrapper, $mform) {
 
     $mform->addElement(
         'select',
+        'local_assign_ai_enableai',
+        get_string('enableai', 'local_assign_ai'),
+        [0 => get_string('no'), 1 => get_string('yes')]
+    );
+    $mform->addHelpButton('local_assign_ai_enableai', 'enableai', 'local_assign_ai');
+    $mform->setDefault('local_assign_ai_enableai', $enableai);
+
+    $mform->addElement(
+        'select',
         'local_assign_ai_autograde',
         get_string('autograde', 'local_assign_ai'),
         [0 => get_string('no'), 1 => get_string('yes')]
     );
     $mform->addHelpButton('local_assign_ai_autograde', 'autograde', 'local_assign_ai');
-    $mform->setDefault('local_assign_ai_autograde', $defaultautograde);
+    $mform->setDefault('local_assign_ai_autograde', $autograde);
+
+    $mform->hideIf('local_assign_ai_autograde', 'local_assign_ai_enableai', 'neq', 1);
+
+    // Use delay.
+    $mform->addElement(
+        'select',
+        'local_assign_ai_usedelay',
+        get_string('usedelay', 'local_assign_ai'),
+        [0 => get_string('no'), 1 => get_string('yes')]
+    );
+    $mform->addHelpButton('local_assign_ai_usedelay', 'usedelay', 'local_assign_ai');
+    $mform->setDefault('local_assign_ai_usedelay', $usedelay);
+
+    $mform->hideIf('local_assign_ai_usedelay', 'local_assign_ai_enableai', 'neq', 1);
+
+    // Delay minutes.
+    $mform->addElement(
+        'text',
+        'local_assign_ai_delayminutes',
+        get_string('delayminutes', 'local_assign_ai')
+    );
+    $mform->setType('local_assign_ai_delayminutes', PARAM_INT);
+    $mform->addRule('local_assign_ai_delayminutes', null, 'numeric', null, 'client');
+    $mform->addHelpButton('local_assign_ai_delayminutes', 'delayminutes', 'local_assign_ai');
+    $mform->setDefault('local_assign_ai_delayminutes', $delayminutes);
+
+    $mform->hideIf('local_assign_ai_delayminutes', 'local_assign_ai_enableai', 'neq', 1);
+
+    $mform->hideIf('local_assign_ai_usedelay', 'local_assign_ai_autograde', 'neq', 1);
+    $mform->hideIf('local_assign_ai_delayminutes', 'local_assign_ai_autograde', 'neq', 1);
+    $mform->hideIf('local_assign_ai_grader', 'local_assign_ai_autograde', 'neq', 1);
+    $mform->hideIf('local_assign_ai_grader', 'local_assign_ai_enableai', 'neq', 1);
+
+    $mform->hideIf('local_assign_ai_delayminutes', 'local_assign_ai_usedelay', 'neq', 1);
 
     // Eligible graders.
     $eligibleusers = get_enrolled_users($context, 'mod/assign:grade');
@@ -188,6 +229,32 @@ function local_assign_ai_coursemodule_standard_elements($formwrapper, $mform) {
     }
 
     $mform->hideIf('local_assign_ai_grader', 'local_assign_ai_autograde', 'neq', 1);
+
+    $mform->addElement(
+        'textarea',
+        'local_assign_ai_prompt',
+        get_string('aiprompt', 'local_assign_ai'),
+        ['rows' => 3, 'cols' => 60]
+    );
+    $mform->setType('local_assign_ai_prompt', PARAM_TEXT);
+    $mform->addHelpButton('local_assign_ai_prompt', 'aiprompt', 'local_assign_ai');
+    $mform->setDefault('local_assign_ai_prompt', $prompt);
+    $mform->hideIf('local_assign_ai_prompt', 'local_assign_ai_enableai', 'neq', 1);
+
+    $mform->addElement(
+        'autocomplete',
+        'local_assign_ai_lang',
+        get_string('ai_response_language', 'local_assign_ai'),
+        $langoptions,
+        [
+            'multiple' => false,
+            'noselectionstring' => get_string('choosedots'),
+        ]
+    );
+    $mform->setType('local_assign_ai_lang', PARAM_ALPHANUMEXT);
+    $mform->addHelpButton('local_assign_ai_lang', 'ai_response_language', 'local_assign_ai');
+    $mform->setDefault('local_assign_ai_lang', $selectedlang);
+    $mform->hideIf('local_assign_ai_lang', 'local_assign_ai_enableai', 'neq', 1);
 }
 
 /**
@@ -204,38 +271,12 @@ function local_assign_ai_coursemodule_edit_post_actions($data, $course) {
         return $data;
     }
 
-    $tenantid = \tool_tenant\tenancy::get_tenant_id();
-
-    // Load tenant-aware record.
-    if ($tenantid === null) {
-        $sql = "SELECT * FROM {local_assign_ai_config}
-                WHERE assignmentid = :assignmentid AND tenantid IS NULL";
-        $params = ['assignmentid' => $data->instance];
-    } else {
-        $sql = "SELECT * FROM {local_assign_ai_config}
-                WHERE assignmentid = :assignmentid AND tenantid = :tenantid";
-        $params = [
-            'assignmentid' => $data->instance,
-            'tenantid' => $tenantid,
-        ];
+    if (!\local_assign_ai\config\assignment_config::is_feature_enabled()) {
+        return $data;
     }
 
-    $record = $DB->get_record_sql($sql, $params);
-
-    // Migrate legacy config to tenant.
-    if (!$record && $tenantid !== null) {
-        $legacy = $DB->get_record('local_assign_ai_config', [
-            'assignmentid' => $data->instance,
-            'tenantid' => null,
-        ]);
-
-        if ($legacy) {
-            $legacy->tenantid = $tenantid;
-            $legacy->timemodified = time();
-            $DB->update_record('local_assign_ai_config', $legacy);
-            $record = $legacy;
-        }
-    }
+    $tenantid = \local_assign_ai\config\assignment_config::get_current_tenant_id();
+    $record = \local_assign_ai\config\assignment_config::get((int)$data->instance, $tenantid);
 
     // Resolve grader.
     $graderid = $record->graderid ?? null;
@@ -247,11 +288,64 @@ function local_assign_ai_coursemodule_edit_post_actions($data, $course) {
         $graderid = !empty($value) ? (int)$value : null;
     }
 
+    $defaults = \local_assign_ai\config\assignment_config::get_default_values($tenantid);
+    $defaultenableai = (int)$defaults->enableai;
+    $defaultautograde = (int)$defaults->autograde;
+    $defaultusedelay = (int)$defaults->usedelay;
+    $defaultdelayminutes = max(1, (int)$defaults->delayminutes);
+    $defaultprompt = (string)$defaults->prompt;
+    $defaultlang = (string)$defaults->lang;
+
+    $enableai = property_exists($data, 'local_assign_ai_enableai')
+        ? (empty($data->local_assign_ai_enableai) ? 0 : 1)
+        : $defaultenableai;
+    $autograde = property_exists($data, 'local_assign_ai_autograde')
+        ? (empty($data->local_assign_ai_autograde) ? 0 : 1)
+        : $defaultautograde;
+    $usedelay = property_exists($data, 'local_assign_ai_usedelay')
+        ? (empty($data->local_assign_ai_usedelay) ? 0 : 1)
+        : $defaultusedelay;
+    $delayminutes = property_exists($data, 'local_assign_ai_delayminutes')
+        ? max(1, (int)$data->local_assign_ai_delayminutes)
+        : $defaultdelayminutes;
+
+    $prompt = property_exists($data, 'local_assign_ai_prompt')
+        ? trim((string)$data->local_assign_ai_prompt)
+        : (string)($record->prompt ?? $defaultprompt);
+    if ($prompt === '') {
+        $prompt = $defaultprompt;
+    }
+
+    $lang = property_exists($data, 'local_assign_ai_lang')
+        ? clean_param((string)$data->local_assign_ai_lang, PARAM_ALPHANUMEXT)
+        : (string)($record->lang ?? $defaultlang);
+    if ($lang === '') {
+        $lang = $defaultlang;
+    }
+
+    if (!$enableai) {
+        $autograde = 0;
+        $usedelay = 0;
+        $delayminutes = 0;
+        $graderid = null;
+    }
+
+    if (!$autograde) {
+        $usedelay = 0;
+        $delayminutes = 0;
+        $graderid = null;
+    }
+
     $config = (object)[
         'assignmentid' => $data->instance,
         'tenantid' => $tenantid,
-        'autograde' => empty($data->local_assign_ai_autograde) ? 0 : 1,
+        'enableai' => $enableai,
+        'autograde' => $autograde,
+        'usedelay' => $usedelay,
+        'delayminutes' => $delayminutes,
         'graderid' => $graderid,
+        'prompt' => $prompt,
+        'lang' => $lang,
         'timemodified' => time(),
         'usermodified' => $USER->id ?? null,
     ];

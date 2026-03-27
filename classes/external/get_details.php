@@ -74,7 +74,17 @@ class get_details extends external_api {
             WHERE courseid = :courseid
               AND assignmentid = :cmid
               AND userid = :userid
-            ORDER BY timemodified DESC, id DESC
+            ORDER BY
+                CASE status
+                    WHEN 'pending' THEN 0
+                    WHEN 'approve' THEN 1
+                    WHEN 'processing' THEN 2
+                    WHEN 'queued' THEN 3
+                    WHEN 'initial' THEN 4
+                    ELSE 5
+                END,
+                timemodified DESC,
+                id DESC
             LIMIT 1
         ";
 
@@ -106,6 +116,7 @@ class get_details extends external_api {
             'userid' => $record->userid,
             'grade' => $record->grade,
             'rubric_response' => $record->rubric_response,
+            'assessment_guide_response' => $record->assessment_guide_response,
         ];
     }
 
@@ -121,6 +132,7 @@ class get_details extends external_api {
             'userid' => new external_value(PARAM_INT, 'User ID'),
             'grade' => new external_value(PARAM_FLOAT, 'AI suggested grade', VALUE_OPTIONAL),
             'rubric_response' => new external_value(PARAM_RAW, 'AI rubric response JSON', VALUE_OPTIONAL),
+            'assessment_guide_response' => new external_value(PARAM_RAW, 'AI guide response JSON', VALUE_OPTIONAL),
         ]);
     }
 }

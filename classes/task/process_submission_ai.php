@@ -19,7 +19,6 @@ namespace local_assign_ai\task;
 defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->dirroot . '/mod/assign/locallib.php');
-require_once($CFG->dirroot . '/local/assign_ai/locallib.php');
 
 use core\task\adhoc_task;
 
@@ -52,6 +51,7 @@ class process_submission_ai extends adhoc_task {
         try {
             $cmid = (int)$data->cmid;
             $userid = (int)$data->userid;
+            $tenantid = isset($data->tenantid) ? (int)$data->tenantid : null;
 
             $cm = get_coursemodule_from_id('assign', $cmid, 0, false, MUST_EXIST);
             $course = get_course($cm->course);
@@ -59,7 +59,7 @@ class process_submission_ai extends adhoc_task {
 
             $assign = new \assign($context, $cm, $course);
 
-            $submission = new \local_assign_ai\assign_submission($userid, $assign);
+            $submission = new \local_assign_ai\assign_submission($userid, $assign, $tenantid);
             $submission->process_submission_ai();
         } catch (\Exception $e) {
             mtrace($e);
