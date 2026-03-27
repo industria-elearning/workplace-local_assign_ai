@@ -90,6 +90,7 @@ class assignment_config {
      * Retrieves cached configuration for a given assignment instance.
      *
      * @param int $assignmentid The assignment instance ID (from {assign}).
+     * @param int|null $tenantid Tenant id override.
      * @return \stdClass|null
      */
     public static function get(int $assignmentid, ?int $tenantid = null): ?\stdClass {
@@ -132,6 +133,7 @@ class assignment_config {
      * Checks whether auto-grading is enabled for a given assignment.
      *
      * @param assign $assign The assignment instance.
+     * @param int|null $tenantid Tenant id override.
      * @return bool
      */
     public static function is_autograde_enabled(assign $assign, ?int $tenantid = null): bool {
@@ -147,6 +149,7 @@ class assignment_config {
      * Returns the effective configuration for an assignment, falling back to site defaults.
      *
      * @param int $assignmentid The assignment instance ID (from {assign}).
+     * @param int|null $tenantid Tenant id override.
      * @return \stdClass
      */
     public static function get_effective(int $assignmentid, ?int $tenantid = null): \stdClass {

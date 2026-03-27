@@ -66,6 +66,7 @@ class assign_submission {
      *
      * @param int $userid User ID of the author of the submission.
      * @param \assign $assign Assig instance.
+     * @param int|null $tenantid Tenant ID override for Workplace processing contexts.
      */
     public function __construct(int $userid, \assign $assign, ?int $tenantid = null) {
         global $DB;
