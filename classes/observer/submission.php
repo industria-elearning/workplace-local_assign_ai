@@ -72,6 +72,7 @@ class submission {
      *
      * @param int $userid User id.
      * @param int $cmid Course module id.
+     * @param int $tenantid Tenant id.
      * @return void
      */
     private static function delete_submission_queue(int $userid, int $cmid, int $tenantid): void {
