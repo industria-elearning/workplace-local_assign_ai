@@ -64,14 +64,7 @@ class module {
                 'assignmentid' => $cmid,
             ]);
 
-            $cmidlike1 = '%"cmid":' . $cmid . '%';
-            $cmidlike2 = '%"cmid":"' . $cmid . '"%';
-            $DB->execute(
-                "DELETE FROM {local_assign_ai_queue}
-                  WHERE type = 'submission'
-                    AND (payload LIKE ? OR payload LIKE ?)",
-                [$cmidlike1, $cmidlike2]
-            );
+            $DB->delete_records('local_assign_ai_queue');
         } catch (\Exception $e) {
             debugging('Exception in course_module_deleted observer: ' . $e->getMessage(), DEBUG_DEVELOPER);
         }
