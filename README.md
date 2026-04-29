@@ -14,6 +14,7 @@ This system does not replace teacher judgment — it acts as an assistant, suppo
 3. In the DataCurso AI Provider settings, configure a valid license key as documented at [https://docs.datacurso.com/index.php?title=Datacurso_AI_Provider#Getting_license_keys](https://docs.datacurso.com/index.php?title=Datacurso_AI_Provider#Getting_license_keys).
 
 **IMPORTANT**: This plugin will not function unless the "DataCurso AI Provider" plugin is installed and licensed.
+
 ## Installation via uploaded ZIP file
 
 1. Log in to your Moodle site as an administrator and go to Site `Administration > Plugins > Install Plugins`.
@@ -72,7 +73,7 @@ Once installed, Assignment AI integrates seamlessly with Moodle’s Assignment m
 Below is the general workflow:
 
 1. Enter the assignment to be reviewed
-   
+
    Teachers start by entering any standard Moodle assignment activity. This can be an essay, report, or file submission created using the usual assignment setup interface.
 
    ![Enter course](./_docs/images/local_assign_ai_enter_course.png)
@@ -80,7 +81,7 @@ Below is the general workflow:
    Assignments can include grading criteria or rubrics — these elements will later be interpreted by the AI to produce accurate analyses and feedback.
 
 2. Access the AI review section
-   
+
    Inside the assignment administration view, a new tab or section called “Review with AI” appears. From here, teachers can access all AI-powered review options.
 
    ![Review_with_ai](./_docs/images/local_assign_ai_enter_review_with_ai.png)
@@ -88,7 +89,7 @@ Below is the general workflow:
    This interface lists all student submissions, including their current review status (e.g., Pending, Reviewed, or Feedback generated).
 
 3. Review all submissions
-   
+
    By clicking the “Review All” button, the system will automatically send all submitted assignments to the AI engine for evaluation.
 
    ![Review_all](./_docs/images/local_assign_ai_button_review_all.png)
@@ -102,7 +103,7 @@ Below is the general workflow:
    - Originality and argumentative quality.
 
 4. Review an individual student
-   
+
    Teachers also have the option to review a single student’s submission by clicking the “Review” button next to that student.
 
    ![Review](./_docs/images/local_assign_ai_button_review.png)
@@ -110,13 +111,13 @@ Below is the general workflow:
    This is useful when the instructor wants to manually supervise or validate the AI’s feedback before approving it.
 
 5. View AI-generated results
-   
+
    Once the AI has analyzed a submission, the system automatically generates a suggested grade and a personalized feedback comment. Teachers can then click “View Details” to see a detailed breakdown of the analysis.
 
    ![View_details](./_docs/images/local_assign_ai_button_view_details.png)
 
 6. Edit and manage AI feedback
-    
+
    A modal window opens displaying the full AI-generated feedback.
    Here, the teacher can:
    - Review the AI’s suggested grade and comment.
@@ -129,13 +130,13 @@ Below is the general workflow:
    When approved, the feedback and grade become visible to the student through the standard Moodle grading interface.
 
 7. Grading interface and rubric integration
-    
+
    By clicking on Grade, the teacher is redirected to Moodle’s standard grading view for that assignment.
 
    ![Grade_view_rubric](./_docs/images/local_assign_ai_grade_view_rubric.png)
 
 8. Final AI feedback presentation
-    
+
    The final view shows the full AI-generated textual feedback alongside the corresponding grade. This allows the teacher to see how the AI justified its evaluation based on the assignment’s learning criteria.
 
    ![Grade_view_feedback](./_docs/images/local_assign_ai_grade_view_feedback.png)
